@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::Epoch;
 use anchor_lang::solana_program::system_instruction;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use std::collections::HashMap;
 
 declare_id!("De1JkAKuuvfrMhKKai7u53w8Ap8ufvF2QPigQMSMTyEh");
@@ -214,6 +214,9 @@ pub mod batch_transfer {
         let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
         Ok(token_balance)
     }
+    pub fn simulate(ctx: Context<Simulate>) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[account]
@@ -290,6 +293,18 @@ pub struct CheckBalanceSol<'info> {
 }
 
 #[derive(Accounts)]
+pub struct Simulate<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    #[account(mut)]
+    pub token_account: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub mint: Account<'info, Mint>,
+}
+
+
+#[derive(Accounts)]
 pub struct CheckBalanceToken<'info> {
     #[account(mut)]
     pub token_account: Account<'info, TokenAccount>,
@@ -308,3 +323,6 @@ pub enum ErrorCode {
     #[msg("Unauthorized access.")]
     Unauthorized,
 }
+
+
+
