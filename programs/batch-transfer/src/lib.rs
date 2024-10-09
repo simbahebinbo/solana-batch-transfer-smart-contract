@@ -227,7 +227,7 @@ pub struct BankAccount {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = deployer, space = 8 + 40)]
+    #[account(init, payer = deployer, space = 8 + 32 + 8)]
     pub bank_account: Account<'info, BankAccount>,
     #[account(mut)]
     pub deployer: Signer<'info>,
