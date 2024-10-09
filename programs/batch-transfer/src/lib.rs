@@ -20,18 +20,18 @@ pub mod batch_transfer {
     }
 
     // 设置手续费
-    // pub fn set_fee(ctx: Context<SetFee>, fee: u64) -> Result<()> {
-    //     let bank_account = &mut ctx.accounts.bank_account;
-    //
-    //     require!(
-    //         ctx.accounts.owner.key() == bank_account.owner,
-    //         ErrorCode::Unauthorized
-    //     );
-    //
-    //     bank_account.fee = fee;
-    //
-    //     Ok(())
-    // }
+    pub fn set_fee(ctx: Context<SetFee>, fee: u64) -> Result<()> {
+        let bank_account = &mut ctx.accounts.bank_account;
+
+        require!(
+            ctx.accounts.admin.key() == bank_account.admin,
+            ErrorCode::Unauthorized
+        );
+
+        bank_account.fee = fee;
+
+        Ok(())
+    }
 
     // // 提现合约中的 Native SOL
     // pub fn withdraw_native(ctx: Context<WithdrawNative>, amount: u64) -> Result<()> {
@@ -234,13 +234,13 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// #[derive(Accounts)]
-// pub struct SetFee<'info> {
-//     #[account(mut)]
-//     pub bank_account: Account<'info, BankAccount>,
-//     #[account(mut)]
-//     pub owner: Signer<'info>,
-// }
+#[derive(Accounts)]
+pub struct SetFee<'info> {
+    #[account(mut)]
+    pub bank_account: Account<'info, BankAccount>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+}
 
 // #[derive(Accounts)]
 // pub struct WithdrawNative<'info> {
