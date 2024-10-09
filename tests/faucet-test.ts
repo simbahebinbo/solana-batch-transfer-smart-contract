@@ -16,7 +16,7 @@
 //     const provider = anchor.AnchorProvider.env();
 //     anchor.setProvider(provider);
 //
-//     const program = anchor.workspace.BatchTransfer as Program<BatchTransfer>;
+//     const program = anchor.workspace.BatchTransfer as anchor.Program<BatchTransfer>;
 //
 //
 //     it('Is Faucet', async () => {

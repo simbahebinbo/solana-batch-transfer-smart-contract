@@ -10,7 +10,7 @@
 //     let provider = anchor.AnchorProvider.env();
 //     anchor.setProvider(provider);
 //
-//     const program = anchor.workspace.BatchTransfer as Program<BatchTransfer>;
+//     const program = anchor.workspace.BatchTransfer as anchor.Program<BatchTransfer>;
 //
 //
 //     it("Is Initialize", async () => {
@@ -62,7 +62,7 @@
 //                 bankAccount: bankAccount.publicKey,
 //                 deployer: deployer.publicKey,
 //                 // @ts-ignore
-//                 systemProgram: SystemProgram.programId,
+//                 systemProgram: anchor.web3.SystemProgram.programId,
 //             })
 //             .signers([bankAccount, deployer])
 //             .rpc();

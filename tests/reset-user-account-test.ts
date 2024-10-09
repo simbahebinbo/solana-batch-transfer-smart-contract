@@ -10,7 +10,7 @@
 //     let provider = anchor.AnchorProvider.env();
 //     anchor.setProvider(provider);
 //
-//     const program = anchor.workspace.BatchTransfer as Program<BatchTransfer>;
+//     const program = anchor.workspace.BatchTransfer as anchor.Program<BatchTransfer>;
 //
 //
 //     it("Is ResetUserAccount", async () => {
@@ -61,7 +61,7 @@
 //                 userAccount: userAccount.publicKey,
 //                 admin: admin.publicKey,
 //                 // @ts-ignore
-//                 systemProgram: SystemProgram.programId,
+//                 systemProgram: anchor.web3.SystemProgram.programId,
 //             })
 //             .signers([admin, userAccount])
 //             .rpc();
