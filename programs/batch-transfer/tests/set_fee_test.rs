@@ -43,17 +43,17 @@ async fn test_set_fee() {
 
     banks_client.process_transaction(initialize_tx).await.unwrap();
 
-    // 设置 supported_token
-    let supported_token = Pubkey::new_unique();
+    // 设置 fee
+    let fee = 5;
 
     let set_fee_ix = Instruction {
         program_id: program_id,
-        accounts: batch_transfer::accounts::SetSupportedToken {
+        accounts: batch_transfer::accounts::SetFee {
             bank_account: bank_account.pubkey(),
             admin: admin.pubkey(),
         }
             .to_account_metas(None),
-        data: batch_transfer::instruction::SetSupportedToken { mint: supported_token }.data(),
+        data: batch_transfer::instruction::SetFee { fee: fee }.data(),
     };
 
     let set_fee_tx = Transaction::new_signed_with_payer(
@@ -71,7 +71,7 @@ async fn test_set_fee() {
         bank_account.pubkey(),
     ).await;
 
-    assert_eq!(bank_account_data.supported_token, supported_token);
+    assert_eq!(bank_account_data.fee, fee);
 }
 
 pub struct SetUpTest {
