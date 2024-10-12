@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::Epoch;
+use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::system_instruction;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use std::collections::HashMap;
@@ -76,69 +77,112 @@ pub mod batch_transfer {
     //
     //     Ok(())
     // }
-    //
-    // // 批量转账 SOL 的函数
-    // pub fn batch_transfer_sol(
-    //     ctx: Context<BatchTransferSol>,
-    //     transfers: HashMap<Pubkey, u64>, // 键是接收者账户，值是转账金额
-    // ) -> Result<()> {
+
+
+    // 批量转账 SOL 的函数
+    // 键是接收者账户，值是转账金额
+    // pub fn batch_transfer_sol(ctx: Context<BatchTransferSol>, transfers: HashMap<Pubkey, u64>) -> Result<()> {
     //     let sender = &ctx.accounts.sender;
     //     let bank_account = &ctx.accounts.bank_account;
-    //     let mut total_amount: u64 = 0;
-    //     let transfers_clone1 = transfers.clone();
-    //     let transfers_clone2 = transfers.clone();
     //
     //     // 求转账总金额
-    //     for amount in transfers_clone1.values() {
-    //         total_amount = total_amount.checked_add(*amount).ok_or(ErrorCode::Overflow)?;
-    //     }
+    //     let sum_ret = safe_sum(&transfers);
+    //
+    //     require!(
+    //     sum_ret.is_ok(),
+    //     ErrorCode::Overflow
+    // );
+    //     let total_amount: u64 = sum_ret.unwrap();
     //
     //     let fee = bank_account.fee;
     //
-    //     // 校验 sender 账户是否有足够的 SOL 来支付所有转账金额和手续费
-    //     let sender_balance = **sender.to_account_info().lamports.borrow();
-    //     let required_balance = total_amount.checked_add(fee).ok_or(ErrorCode::Overflow)?;
+    //     let add_ret = safe_add(total_amount, fee);
     //
     //     require!(
-    //         sender_balance >= required_balance,
-    //         ErrorCode::InsufficientFunds
-    //     );
+    //     add_ret.is_ok(),
+    //     ErrorCode::Overflow
+    // );
+    //
+    //     // 校验 sender 账户是否有足够的 SOL 来支付所有转账金额和手续费
+    //     let sender_balance = **sender.to_account_info().lamports.borrow();
+    //     let required_balance = add_ret.unwrap();
+    //
+    //     require!(
+    //     sender_balance >= required_balance,
+    //     ErrorCode::InsufficientFunds
+    // );
     //
     //     // 扣除手续费到合约地址
     //     **sender.to_account_info().lamports.borrow_mut() -= fee;
     //     **bank_account.to_account_info().lamports.borrow_mut() += fee;
     //
-    //     let mut lamports = 0;
-    //     let default_pubkey = Pubkey::default();
     //     // 进行批量转账
-    //     for (recipient, amount) in transfers_clone2.iter() {
+    //     for (recipient, amount) in transfers.iter() {
     //         let ix = anchor_lang::solana_program::system_instruction::transfer(
     //             &sender.key(),
     //             recipient,
     //             *amount,
     //         );
     //
+    //         // 获取 sender 的 account_info 变量
+    //         let sender_account_info = sender.to_account_info();
+    //
+    //         // 获取 recipient 的账户信息
+    //         let recipient_account_info = next_account_info(&mut ctx.remaining_accounts.iter())?;
+    //
+    //         // 调用 Solana 的 transfer 系统指令
     //         anchor_lang::solana_program::program::invoke(
     //             &ix,
     //             &[
-    //                 sender.to_account_info(),
-    //                 AccountInfo::new(
-    //                     recipient,
-    //                     false,
-    //                     true,
-    //                     &mut lamports,
-    //                     &mut [],
-    //                     &default_pubkey,
-    //                     false,
-    //                     Epoch::default(),
-    //                 ),
+    //                 sender_account_info.clone(),
+    //                 recipient_account_info.clone(),
     //             ],
     //         )?;
     //     }
     //
     //     Ok(())
     // }
+
+    // pub fn transfer_sol(ctx: Context<TransferSol>) -> Result<()> {
+    //     let from_account = &ctx.accounts.from;
+    //     let system_program = &ctx.accounts.system_program;
+    //     let bank_account = &mut ctx.accounts.bank_account;
     //
+    //     // Transfer SOL to multiple 'to' accounts with specified amounts
+    //     for (to_account, &amount) in ctx.accounts.to.iter() {
+    //         let transfer_amount_ix = anchor_lang::solana_program::system_instruction::transfer(&from_account.key, &to_account.key(), amount);
+    //         anchor_lang::solana_program::program::invoke(
+    //             &transfer_amount_ix,
+    //             &[
+    //                 from_account.to_account_info(),
+    //                 to_account.to_account_info(),
+    //                 system_program.to_account_info(),
+    //             ],
+    //         )?;
+    //     }
+    //
+    //     // Transfer fee to the bank account
+    //     let transfer_fee_ix = anchor_lang::solana_program::system_instruction::transfer(&from_account.key, &bank_account.to_account_info().key, bank_account.fee);
+    //     anchor_lang::solana_program::program::invoke(
+    //         &transfer_fee_ix,
+    //         &[
+    //             from_account.to_account_info(),
+    //             bank_account.to_account_info(),
+    //             system_program.to_account_info(),
+    //         ],
+    //     )?;
+    //
+    //     // Emit the TransferEvent after successful transfers
+    //     emit!(TransferEvent {
+    //         from: from_account.key(),
+    //         to: ctx.accounts.to.iter().map(|(a, _)| a.key()).collect(),
+    //         total_amount: ctx.accounts.to.iter().map(|(_, amount)| amount).sum::<u64>(),
+    //         fee: bank_account.fee,
+    //     });
+    //
+    //     Ok(())
+    // }
+
     // // 批量转账 SPL Token 的函数
     // pub fn batch_transfer_token(
     //     ctx: Context<BatchTransferToken>,
@@ -205,15 +249,15 @@ pub mod batch_transfer {
     // }
 
     // 查询账户余额的函数
-    pub fn check_balance_sol(ctx: Context<CheckBalanceSol>) -> Result<u64> {
-        let account_balance = **ctx.accounts.account.to_account_info().lamports.borrow();
-        Ok(account_balance)
-    }
+    // pub fn check_balance_sol(ctx: Context<CheckBalanceSol>) -> Result<u64> {
+    //     let account_balance = **ctx.accounts.account.to_account_info().lamports.borrow();
+    //     Ok(account_balance)
+    // }
 
-    pub fn check_balance_token(ctx: Context<CheckBalanceToken>) -> Result<u64> {
-        let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
-        Ok(token_balance)
-    }
+    // pub fn check_balance_token(ctx: Context<CheckBalanceToken>) -> Result<u64> {
+    //     let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
+    //     Ok(token_balance)
+    // }
     pub fn simulate(ctx: Context<Simulate>) -> Result<()> {
         Ok(())
     }
@@ -264,16 +308,34 @@ pub struct SetFee<'info> {
 //     pub recipient_token_account: Account<'info, TokenAccount>,
 //     pub token_program: Program<'info, Token>,
 // }
-//
+
 // #[derive(Accounts)]
 // pub struct BatchTransferSol<'info> {
+//     #[account(mut, signer)]
+//     /// CHECK: This is not dangerous because we don't read or write from this account
+//     pub from: AccountInfo<'info>,
+//     /// Each entry includes an AccountInfo for the recipient and the amount to transfer.
 //     #[account(mut)]
-//     pub sender: Signer<'info>,
+//     pub to: Vec<(AccountInfo<'info>, u64)>,
 //     #[account(mut)]
 //     pub bank_account: Account<'info, BankAccount>,
+//     /// CHECK: This is not dangerous because we don't read or write from this account
+//     pub system_program: AccountInfo<'info>,
+// }
+
+// #[derive(Accounts)]
+// pub struct TransferSol<'info> {
+//     #[account(mut, signer)]
+//     pub from: AccountInfo<'info>,
+//     #[account(mut)]
+//     pub to: Vec<(AccountInfo<'info>, u64)>,  // Each 'to' account comes with its transfer amount
+//     #[account(mut)]
+//     pub bank_account: Account<'info, BankAccount>,
+//     pub admin: Signer<'info>, // Admin who has permission to update fee
 //     pub system_program: Program<'info, System>,
 // }
-//
+
+
 // #[derive(Accounts)]
 // pub struct BatchTransferToken<'info> {
 //     #[account(mut)]
@@ -286,11 +348,11 @@ pub struct SetFee<'info> {
 //     pub system_program: Program<'info, System>,
 // }
 
-#[derive(Accounts)]
-pub struct CheckBalanceSol<'info> {
-    #[account(mut)]
-    pub account: SystemAccount<'info>,
-}
+// #[derive(Accounts)]
+// pub struct CheckBalanceSol<'info> {
+//     #[account(mut)]
+//     pub account: SystemAccount<'info>,
+// }
 
 #[derive(Accounts)]
 pub struct Simulate<'info> {
@@ -304,10 +366,18 @@ pub struct Simulate<'info> {
 }
 
 
-#[derive(Accounts)]
-pub struct CheckBalanceToken<'info> {
-    #[account(mut)]
-    pub token_account: Account<'info, TokenAccount>,
+// #[derive(Accounts)]
+// pub struct CheckBalanceToken<'info> {
+//     #[account(mut)]
+//     pub token_account: Account<'info, TokenAccount>,
+// }
+
+#[event]
+pub struct TransferEvent {
+    pub from: Pubkey,
+    pub to: Vec<Pubkey>,
+    pub total_amount: u64,
+    pub fee: u64,
 }
 
 #[error_code]
@@ -325,4 +395,14 @@ pub enum ErrorCode {
 }
 
 
+// Helper function: 求和并检查溢出
+fn safe_sum(transfers: &HashMap<Pubkey, u64>) -> std::result::Result<u64, ProgramError> {
+    transfers.values().try_fold(0u64, |acc, &value| {
+        acc.checked_add(value).ok_or(ProgramError::InvalidArgument)
+    })
+}
+
+fn safe_add(a: u64, b: u64) -> std::result::Result<u64, ProgramError> {
+    a.checked_add(b).ok_or(ProgramError::InvalidArgument)
+}
 
