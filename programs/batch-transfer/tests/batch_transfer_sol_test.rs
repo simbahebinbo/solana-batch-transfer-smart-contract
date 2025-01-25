@@ -11,6 +11,95 @@ use batch_transfer::BankAccount;
 
 const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
+/// 辅助函数：初始化测试环境
+async fn setup_test_env() -> (ProgramTest, Keypair, Keypair, Keypair) {
+    let program_id = batch_transfer::ID;
+    let mut pt = ProgramTest::new("batch_transfer", program_id, None);
+    pt.set_compute_max_units(1200_000);
+
+    let admin = Keypair::new();
+    let sender = Keypair::new();
+    let bank_account = Keypair::new();
+
+    // 为管理员和发送者添加初始余额
+    let initial_balance = 100 * LAMPORTS_PER_SOL;
+    for account in [&admin, &sender] {
+        pt.add_account(
+            account.pubkey(),
+            Account {
+                lamports: initial_balance,
+                ..Account::default()
+            },
+        );
+    }
+
+    (pt, admin, sender, bank_account)
+}
+
+/// 辅助函数：初始化 bank_account
+async fn initialize_bank_account(
+    banks_client: &mut solana_program_test::BanksClient,
+    admin: &Keypair,
+    bank_account: &Keypair,
+    recent_blockhash: solana_sdk::hash::Hash,
+) {
+    let program_id = batch_transfer::ID;
+    let initialize_ix = Instruction {
+        program_id,
+        accounts: batch_transfer::accounts::Initialize {
+            bank_account: bank_account.pubkey(),
+            deployer: admin.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None),
+        data: batch_transfer::instruction::Initialize {
+            admin: admin.pubkey(),
+        }
+        .data(),
+    };
+
+    let initialize_tx = Transaction::new_signed_with_payer(
+        &[initialize_ix],
+        Some(&admin.pubkey()),
+        &[admin, bank_account],
+        recent_blockhash,
+    );
+
+    banks_client
+        .process_transaction(initialize_tx)
+        .await
+        .unwrap();
+}
+
+/// 辅助函数：设置手续费
+async fn set_fee(
+    banks_client: &mut solana_program_test::BanksClient,
+    admin: &Keypair,
+    bank_account: &Keypair,
+    fee: u64,
+    recent_blockhash: solana_sdk::hash::Hash,
+) {
+    let program_id = batch_transfer::ID;
+    let set_fee_ix = Instruction {
+        program_id,
+        accounts: batch_transfer::accounts::SetFee {
+            bank_account: bank_account.pubkey(),
+            admin: admin.pubkey(),
+        }
+        .to_account_metas(None),
+        data: batch_transfer::instruction::SetFee { fee }.data(),
+    };
+
+    let set_fee_tx = Transaction::new_signed_with_payer(
+        &[set_fee_ix],
+        Some(&admin.pubkey()),
+        &[admin],
+        recent_blockhash,
+    );
+
+    banks_client.process_transaction(set_fee_tx).await.unwrap();
+}
+
 #[tokio::test]
 async fn test_batch_transfer_sol() {
     // 初始化测试环境
@@ -589,4 +678,214 @@ async fn test_batch_transfer_sol_empty_transfers() {
     // 交易应该失败，因为转账列表为空
     let result = banks_client.process_transaction(batch_transfer_tx).await;
     assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_sol_single_transfer() {
+    let (mut pt, admin, sender, bank_account) = setup_test_env().await;
+    let recipient = Keypair::new();
+    let (mut banks_client, _payer, recent_blockhash) = pt.start().await;
+
+    // 初始化并设置手续费
+    initialize_bank_account(&mut banks_client, &admin, &bank_account, recent_blockhash).await;
+    let fee = LAMPORTS_PER_SOL / 100; // 0.01 SOL
+    set_fee(&mut banks_client, &admin, &bank_account, fee, recent_blockhash).await;
+
+    // 执行单笔转账
+    let transfer_amount = LAMPORTS_PER_SOL; // 1 SOL
+    let transfers = vec![(recipient.pubkey(), transfer_amount)];
+
+    let batch_transfer_ix = Instruction {
+        program_id: batch_transfer::ID,
+        accounts: batch_transfer::accounts::BatchTransferSol {
+            sender: sender.pubkey(),
+            bank_account: bank_account.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(Some(true)),
+        data: batch_transfer::instruction::BatchTransferSol { transfers: transfers.clone() }.data(),
+    };
+
+    let mut accounts = batch_transfer_ix.accounts;
+    accounts.extend(
+        transfers
+            .iter()
+            .map(|(pubkey, _)| AccountMeta::new(*pubkey, false)),
+    );
+
+    let batch_transfer_ix = Instruction {
+        program_id: batch_transfer_ix.program_id,
+        accounts,
+        data: batch_transfer_ix.data,
+    };
+
+    let batch_transfer_tx = Transaction::new_signed_with_payer(
+        &[batch_transfer_ix],
+        Some(&sender.pubkey()),
+        &[&sender],
+        recent_blockhash,
+    );
+
+    banks_client
+        .process_transaction(batch_transfer_tx)
+        .await
+        .unwrap();
+
+    // 验证转账结果
+    let recipient_balance = banks_client
+        .get_account(recipient.pubkey())
+        .await
+        .unwrap()
+        .unwrap()
+        .lamports;
+    assert_eq!(recipient_balance, transfer_amount);
+}
+
+#[tokio::test]
+async fn test_sol_large_amount_overflow() {
+    let (mut pt, admin, sender, bank_account) = setup_test_env().await;
+    let recipient = Keypair::new();
+    let (mut banks_client, _payer, recent_blockhash) = pt.start().await;
+
+    // 初始化并设置手续费
+    initialize_bank_account(&mut banks_client, &admin, &bank_account, recent_blockhash).await;
+    let fee = LAMPORTS_PER_SOL / 100; // 0.01 SOL
+    set_fee(&mut banks_client, &admin, &bank_account, fee, recent_blockhash).await;
+
+    // 尝试转账超大金额
+    let transfer_amount = u64::MAX;
+    let transfers = vec![(recipient.pubkey(), transfer_amount)];
+
+    let batch_transfer_ix = Instruction {
+        program_id: batch_transfer::ID,
+        accounts: batch_transfer::accounts::BatchTransferSol {
+            sender: sender.pubkey(),
+            bank_account: bank_account.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(Some(true)),
+        data: batch_transfer::instruction::BatchTransferSol { transfers: transfers.clone() }.data(),
+    };
+
+    let mut accounts = batch_transfer_ix.accounts;
+    accounts.extend(
+        transfers
+            .iter()
+            .map(|(pubkey, _)| AccountMeta::new(*pubkey, false)),
+    );
+
+    let batch_transfer_ix = Instruction {
+        program_id: batch_transfer_ix.program_id,
+        accounts,
+        data: batch_transfer_ix.data,
+    };
+
+    let batch_transfer_tx = Transaction::new_signed_with_payer(
+        &[batch_transfer_ix],
+        Some(&sender.pubkey()),
+        &[&sender],
+        recent_blockhash,
+    );
+
+    // 预期交易会失败
+    let result = banks_client.process_transaction(batch_transfer_tx).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_unauthorized_set_fee() {
+    let (mut pt, admin, sender, bank_account) = setup_test_env().await;
+    let (mut banks_client, _payer, recent_blockhash) = pt.start().await;
+
+    // 初始化
+    initialize_bank_account(&mut banks_client, &admin, &bank_account, recent_blockhash).await;
+
+    // 非管理员尝试设置手续费
+    let fee = LAMPORTS_PER_SOL / 100; // 0.01 SOL
+    let set_fee_ix = Instruction {
+        program_id: batch_transfer::ID,
+        accounts: batch_transfer::accounts::SetFee {
+            bank_account: bank_account.pubkey(),
+            admin: sender.pubkey(), // 使用非管理员账户
+        }
+        .to_account_metas(None),
+        data: batch_transfer::instruction::SetFee { fee }.data(),
+    };
+
+    let set_fee_tx = Transaction::new_signed_with_payer(
+        &[set_fee_ix],
+        Some(&sender.pubkey()),
+        &[&sender],
+        recent_blockhash,
+    );
+
+    // 预期交易会失败
+    let result = banks_client.process_transaction(set_fee_tx).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_sol_many_recipients() {
+    let (mut pt, admin, sender, bank_account) = setup_test_env().await;
+    let (mut banks_client, _payer, recent_blockhash) = pt.start().await;
+
+    // 初始化并设置手续费
+    initialize_bank_account(&mut banks_client, &admin, &bank_account, recent_blockhash).await;
+    let fee = LAMPORTS_PER_SOL / 100; // 0.01 SOL
+    set_fee(&mut banks_client, &admin, &bank_account, fee, recent_blockhash).await;
+
+    // 创建多个接收者
+    let recipients: Vec<Keypair> = (0..10).map(|_| Keypair::new()).collect();
+    let transfer_amount = LAMPORTS_PER_SOL / 10; // 0.1 SOL each
+    let transfers: Vec<(Pubkey, u64)> = recipients
+        .iter()
+        .map(|recipient| (recipient.pubkey(), transfer_amount))
+        .collect();
+
+    let batch_transfer_ix = Instruction {
+        program_id: batch_transfer::ID,
+        accounts: batch_transfer::accounts::BatchTransferSol {
+            sender: sender.pubkey(),
+            bank_account: bank_account.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(Some(true)),
+        data: batch_transfer::instruction::BatchTransferSol { transfers: transfers.clone() }.data(),
+    };
+
+    let mut accounts = batch_transfer_ix.accounts;
+    accounts.extend(
+        transfers
+            .iter()
+            .map(|(pubkey, _)| AccountMeta::new(*pubkey, false)),
+    );
+
+    let batch_transfer_ix = Instruction {
+        program_id: batch_transfer_ix.program_id,
+        accounts,
+        data: batch_transfer_ix.data,
+    };
+
+    let batch_transfer_tx = Transaction::new_signed_with_payer(
+        &[batch_transfer_ix],
+        Some(&sender.pubkey()),
+        &[&sender],
+        recent_blockhash,
+    );
+
+    banks_client
+        .process_transaction(batch_transfer_tx)
+        .await
+        .unwrap();
+
+    // 验证每个接收者的余额
+    for recipient in recipients {
+        let balance = banks_client
+            .get_account(recipient.pubkey())
+            .await
+            .unwrap()
+            .unwrap()
+            .lamports;
+        assert_eq!(balance, transfer_amount);
+    }
 }
