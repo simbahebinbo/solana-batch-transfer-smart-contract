@@ -169,15 +169,16 @@ pub mod batch_transfer {
     }
 
     // 查询账户余额的函数
-    // pub fn check_balance_sol(ctx: Context<CheckBalanceSol>) -> Result<u64> {
-    //     let account_balance = **ctx.accounts.account.to_account_info().lamports.borrow();
-    //     Ok(account_balance)
-    // }
+    pub fn check_balance_sol(ctx: Context<CheckBalanceSol>) -> Result<u64> {
+        let account_balance = **ctx.accounts.account.to_account_info().lamports.borrow();
+        Ok(account_balance)
+    }
 
-    // pub fn check_balance_token(ctx: Context<CheckBalanceToken>) -> Result<u64> {
-    //     let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
-    //     Ok(token_balance)
-    // }
+    pub fn check_balance_token(ctx: Context<CheckBalanceToken>) -> Result<u64> {
+        let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
+        Ok(token_balance)
+    }
+
     pub fn simulate(_ctx: Context<Simulate>) -> Result<()> {
         Ok(())
     }
@@ -227,11 +228,11 @@ pub struct BatchTransferToken<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// #[derive(Accounts)]
-// pub struct CheckBalanceSol<'info> {
-//     #[account(mut)]
-//     pub account: SystemAccount<'info>,
-// }
+#[derive(Accounts)]
+pub struct CheckBalanceSol<'info> {
+    #[account(mut)]
+    pub account: SystemAccount<'info>,
+}
 
 #[derive(Accounts)]
 pub struct Simulate<'info> {
@@ -244,12 +245,11 @@ pub struct Simulate<'info> {
     pub mint: Account<'info, Mint>,
 }
 
-//
-// #[derive(Accounts)]
-// pub struct CheckBalanceToken<'info> {
-//     #[account(mut)]
-//     pub token_account: Account<'info, TokenAccount>,
-// }
+#[derive(Accounts)]
+pub struct CheckBalanceToken<'info> {
+    #[account(mut)]
+    pub token_account: Account<'info, TokenAccount>,
+}
 
 /**
  * @notice SOL转账事件
