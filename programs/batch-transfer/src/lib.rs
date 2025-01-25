@@ -47,6 +47,11 @@ pub mod batch_transfer {
         ctx: Context<'_, '_, '_, 'info, BatchTransferSol<'info>>,
         transfers: Vec<(Pubkey, u64)>,
     ) -> Result<()> {
+        // 检查转账列表不能为空
+        if transfers.is_empty() {
+            return Err(ErrorCode::EmptyTransfers.into());
+        }
+
         // 计算总转账金额
         let total_amount = safe_sum(&transfers)?;
         let fee = ctx.accounts.bank_account.fee;
@@ -60,26 +65,45 @@ pub mod batch_transfer {
         );
 
         // 扣除手续费
-        {
-            let bank_account_info = &ctx.accounts.bank_account.to_account_info();
-            let sender_info = &ctx.accounts.sender.to_account_info();
-            let mut sender_lamports = sender_info.lamports.borrow_mut();
-            let mut bank_lamports = bank_account_info.lamports.borrow_mut();
-            **sender_lamports -= fee;
-            **bank_lamports += fee;
-        }
+        let bank_account_info = &ctx.accounts.bank_account.to_account_info();
+        let sender_info = &ctx.accounts.sender.to_account_info();
+        let system_program = &ctx.accounts.system_program;
+
+        // 使用 system_program 转账手续费
+        let fee_ix = system_instruction::transfer(
+            &sender_info.key(),
+            &bank_account_info.key(),
+            fee
+        );
+        anchor_lang::solana_program::program::invoke(
+            &fee_ix,
+            &[
+                sender_info.clone(),
+                bank_account_info.clone(),
+                system_program.to_account_info(),
+            ],
+        )?;
 
         // 执行批量转账
-        let sender_info = &ctx.accounts.sender.to_account_info();
         let mut remaining_accounts = ctx.remaining_accounts.iter();
         for (recipient, amount) in transfers.iter() {
             let recipient_account_info = remaining_accounts
                 .next()
                 .ok_or(ProgramError::NotEnoughAccountKeys)?;
 
+            // 使用 system_program 进行转账
+            let transfer_ix = system_instruction::transfer(
+                &sender_info.key(),
+                recipient,
+                *amount
+            );
             anchor_lang::solana_program::program::invoke(
-                &system_instruction::transfer(&sender_info.key(), recipient, *amount),
-                &[sender_info.clone(), recipient_account_info.clone()],
+                &transfer_ix,
+                &[
+                    sender_info.clone(),
+                    recipient_account_info.clone(),
+                    system_program.to_account_info(),
+                ],
             )?;
         }
 
@@ -87,7 +111,6 @@ pub mod batch_transfer {
         emit!(SolTransferEvent {
             from: ctx.accounts.sender.key(),
             recipients: transfers.iter().map(|(pubkey, _)| *pubkey).collect(),
-            amounts: transfers.iter().map(|(_, amount)| *amount).collect(),
             total_amount,
             fee,
         });
@@ -104,23 +127,27 @@ pub mod batch_transfer {
         ctx: Context<'_, '_, '_, 'info, BatchTransferToken<'info>>,
         transfers: Vec<(Pubkey, u64)>,
     ) -> Result<()> {
+        // 检查转账列表不能为空
+        if transfers.is_empty() {
+            return Err(ErrorCode::EmptyTransfers.into());
+        }
+
         // 计算总转账金额
         let total_amount = safe_sum(&transfers)?;
         let fee = ctx.accounts.bank_account.fee;
+        let required_balance = safe_add(total_amount, fee)?;
 
-        // 检查token余额
-        let sender_token_balance = ctx.accounts.token_account.amount;
-        require!(
-            sender_token_balance >= total_amount,
-            ErrorCode::InsufficientTokenBalance
-        );
+        // 检查发送者余额是否足够
+        let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
+        if token_balance < total_amount {
+            return Err(ErrorCode::InsufficientFunds.into());
+        }
 
-        // 检查SOL余额（用于支付手续费）
-        let sender_sol_balance = ctx.accounts.sender.lamports();
-        require!(
-            sender_sol_balance >= fee,
-            ErrorCode::InsufficientFundsForFee
-        );
+        // 检查发送者SOL余额是否足够支付手续费
+        let sender_balance = ctx.accounts.sender.lamports();
+        if sender_balance < fee {
+            return Err(ErrorCode::InsufficientFunds.into());
+        }
 
         // 扣除手续费
         {
@@ -209,7 +236,8 @@ pub struct SetFee<'info> {
 
 #[derive(Accounts)]
 pub struct BatchTransferSol<'info> {
-    #[account(mut, signer)]
+    /// CHECK: 发送者账户，必须是签名者且可变
+    #[account(mut)]
     pub sender: Signer<'info>,
     #[account(mut)]
     pub bank_account: Account<'info, BankAccount>,
@@ -263,7 +291,6 @@ pub struct CheckBalanceToken<'info> {
 pub struct SolTransferEvent {
     pub from: Pubkey,
     pub recipients: Vec<Pubkey>,
-    pub amounts: Vec<u64>,
     pub total_amount: u64,
     pub fee: u64,
 }
@@ -289,16 +316,14 @@ pub struct TokenTransferEvent {
 
 #[error_code]
 pub enum ErrorCode {
-    #[msg("计算过程中发生溢出")]
-    Overflow,
     #[msg("SOL余额不足")]
     InsufficientFunds,
-    #[msg("Token余额不足")]
-    InsufficientTokenBalance,
-    #[msg("SOL余额不足以支付手续费")]
-    InsufficientFundsForFee,
-    #[msg("未授权的操作")]
+    #[msg("算术溢出")]
+    ArithmeticOverflow,
+    #[msg("未授权")]
     Unauthorized,
+    #[msg("转账列表不能为空")]
+    EmptyTransfers,
 }
 
 /// 安全求和函数，防止溢出
