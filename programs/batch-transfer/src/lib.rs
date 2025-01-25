@@ -150,17 +150,26 @@ pub mod batch_transfer {
         }
 
         // 扣除手续费
-        {
-            let bank_account_info = &ctx.accounts.bank_account.to_account_info();
-            let sender_info = &ctx.accounts.sender.to_account_info();
-            let mut sender_lamports = sender_info.lamports.borrow_mut();
-            let mut bank_lamports = bank_account_info.lamports.borrow_mut();
-            **sender_lamports -= fee;
-            **bank_lamports += fee;
-        }
+        let bank_account_info = &ctx.accounts.bank_account.to_account_info();
+        let sender_info = &ctx.accounts.sender.to_account_info();
+        let system_program = &ctx.accounts.system_program;
+
+        // 使用 system_program 转账手续费
+        let fee_ix = system_instruction::transfer(
+            &sender_info.key(),
+            &bank_account_info.key(),
+            fee
+        );
+        anchor_lang::solana_program::program::invoke(
+            &fee_ix,
+            &[
+                sender_info.clone(),
+                bank_account_info.clone(),
+                system_program.to_account_info(),
+            ],
+        )?;
 
         // 执行批量转账
-        let sender_info = &ctx.accounts.sender.to_account_info();
         let token_account_info = &ctx.accounts.token_account.to_account_info();
         let token_program_info = &ctx.accounts.token_program.to_account_info();
         let mut remaining_accounts = ctx.remaining_accounts.iter();
