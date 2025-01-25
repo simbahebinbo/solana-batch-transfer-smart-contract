@@ -3,7 +3,7 @@ use anchor_lang::solana_program::clock::Epoch;
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_lang::solana_program::system_instruction;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
-use std::collections::HashMap;
+// use std::collections::HashMap;
 
 declare_id!("De1JkAKuuvfrMhKKai7u53w8Ap8ufvF2QPigQMSMTyEh");
 
@@ -12,43 +12,24 @@ pub mod batch_transfer {
     use super::*;
 
     // 初始化合约账户
-    pub fn initialize(ctx: Context<Initialize>, admin: Pubkey) -> Result<()> {
-        let bank_account = &mut ctx.accounts.bank_account;
-
-        bank_account.admin = admin;
-
-        Ok(())
-    }
+    // pub fn initialize(ctx: Context<Initialize>, admin: Pubkey) -> Result<()> {
+    //     let bank_account = &mut ctx.accounts.bank_account;
+    //
+    //     bank_account.admin = admin;
+    //
+    //     Ok(())
+    // }
 
     // 设置手续费
-    pub fn set_fee(ctx: Context<SetFee>, fee: u64) -> Result<()> {
-        let bank_account = &mut ctx.accounts.bank_account;
-
-        require!(
-            ctx.accounts.admin.key() == bank_account.admin,
-            ErrorCode::Unauthorized
-        );
-
-        bank_account.fee = fee;
-
-        Ok(())
-    }
-
-    // // 提现合约中的 Native SOL
-    // pub fn withdraw_native(ctx: Context<WithdrawNative>, amount: u64) -> Result<()> {
-    //     let bank_account = &ctx.accounts.bank_account;
-    //     let recipient = &ctx.accounts.recipient;
+    // pub fn set_fee(ctx: Context<SetFee>, fee: u64) -> Result<()> {
+    //     let bank_account = &mut ctx.accounts.bank_account;
     //
     //     require!(
-    //         bank_account.owner == ctx.accounts.owner.key(),
+    //         ctx.accounts.admin.key() == bank_account.admin,
     //         ErrorCode::Unauthorized
     //     );
     //
-    //     let contract_balance = **bank_account.to_account_info().lamports.borrow();
-    //     require!(contract_balance >= amount, ErrorCode::InsufficientFunds);
-    //
-    //     **bank_account.to_account_info().lamports.borrow_mut() -= amount;
-    //     **recipient.to_account_info().lamports.borrow_mut() += amount;
+    //     bank_account.fee = fee;
     //
     //     Ok(())
     // }
@@ -78,10 +59,15 @@ pub mod batch_transfer {
     //     Ok(())
     // }
 
-
     // 批量转账 SOL 的函数
     // 键是接收者账户，值是转账金额
     // pub fn batch_transfer_sol(ctx: Context<BatchTransferSol>, transfers: HashMap<Pubkey, u64>) -> Result<()> {
+
+    // 批量转账 SOL 的函数
+    // pub fn batch_transfer_sol(
+    //     ctx: Context<BatchTransferSol>,
+    //     transfers: HashMap<Pubkey, u64>, // 键是接收者账户，值是转账金额
+    // ) -> Result<()> {
     //     let sender = &ctx.accounts.sender;
     //     let bank_account = &ctx.accounts.bank_account;
     //
@@ -184,6 +170,7 @@ pub mod batch_transfer {
     // }
 
     // // 批量转账 SPL Token 的函数
+    // 批量转账 SPL Token 的函数
     // pub fn batch_transfer_token(
     //     ctx: Context<BatchTransferToken>,
     //     transfers: HashMap<Pubkey, u64>, // 键是接收者账户，值是转账金额
@@ -258,57 +245,60 @@ pub mod batch_transfer {
     //     let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
     //     Ok(token_balance)
     // }
-    pub fn simulate(ctx: Context<Simulate>) -> Result<()> {
-        Ok(())
-    }
+    // pub fn simulate(ctx: Context<Simulate>) -> Result<()> {
+    //     Ok(())
+    // }
+    // pub fn simulate(ctx: Context<Simulate>) -> Result<()> {
+    //     Ok(())
+    // }
 }
 
-#[account]
-pub struct BankAccount {
-    pub admin: Pubkey,
-    pub fee: u64,
-}
-
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(init, payer = deployer, space = 8 + 32 + 8)]
-    pub bank_account: Account<'info, BankAccount>,
-    #[account(mut)]
-    pub deployer: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct SetFee<'info> {
-    #[account(mut)]
-    pub bank_account: Account<'info, BankAccount>,
-    #[account(mut)]
-    pub admin: Signer<'info>,
-}
-
-// #[derive(Accounts)]
-// pub struct WithdrawNative<'info> {
-//     #[account(mut)]
-//     pub bank_account: Account<'info, BankAccount>,
-//     #[account(mut)]
-//     pub owner: Signer<'info>,
-//     #[account(mut)]
-//     pub recipient: SystemAccount<'info>,
+// #[account]
+// pub struct BankAccount {
+//     pub admin: Pubkey,
+//     pub fee: u64,
 // }
 //
 // #[derive(Accounts)]
-// pub struct WithdrawSPLToken<'info> {
+// pub struct Initialize<'info> {
+//     #[account(init, payer = deployer, space = 8 + 32 + 8)]
+//     pub bank_account: Account<'info, BankAccount>,
+//     #[account(mut)]
+//     pub deployer: Signer<'info>,
+//     pub system_program: Program<'info, System>,
+// }
+//
+// #[derive(Accounts)]
+// pub struct SetFee<'info> {
 //     #[account(mut)]
 //     pub bank_account: Account<'info, BankAccount>,
 //     #[account(mut)]
-//     pub contract_token_account: Account<'info, TokenAccount>,
-//     #[account(mut)]
-//     pub owner: Signer<'info>,
-//     #[account(mut)]
-//     pub recipient_token_account: Account<'info, TokenAccount>,
-//     pub token_program: Program<'info, Token>,
+//     pub admin: Signer<'info>,
 // }
-
+//
+// // #[derive(Accounts)]
+// // pub struct WithdrawNative<'info> {
+// //     #[account(mut)]
+// //     pub bank_account: Account<'info, BankAccount>,
+// //     #[account(mut)]
+// //     pub owner: Signer<'info>,
+// //     #[account(mut)]
+// //     pub recipient: SystemAccount<'info>,
+// // }
+// //
+// // #[derive(Accounts)]
+// // pub struct WithdrawSPLToken<'info> {
+// //     #[account(mut)]
+// //     pub bank_account: Account<'info, BankAccount>,
+// //     #[account(mut)]
+// //     pub contract_token_account: Account<'info, TokenAccount>,
+// //     #[account(mut)]
+// //     pub owner: Signer<'info>,
+// //     #[account(mut)]
+// //     pub recipient_token_account: Account<'info, TokenAccount>,
+// //     pub token_program: Program<'info, Token>,
+// // }
+// //
 // #[derive(Accounts)]
 // pub struct BatchTransferSol<'info> {
 //     #[account(mut, signer)]
@@ -335,7 +325,6 @@ pub struct SetFee<'info> {
 //     pub system_program: Program<'info, System>,
 // }
 
-
 // #[derive(Accounts)]
 // pub struct BatchTransferToken<'info> {
 //     #[account(mut)]
@@ -347,62 +336,86 @@ pub struct SetFee<'info> {
 //     pub token_program: Program<'info, Token>,
 //     pub system_program: Program<'info, System>,
 // }
-
 // #[derive(Accounts)]
 // pub struct CheckBalanceSol<'info> {
 //     #[account(mut)]
 //     pub account: SystemAccount<'info>,
 // }
 
-#[derive(Accounts)]
-pub struct Simulate<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    #[account(mut)]
-    pub token_account: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub mint: Account<'info, Mint>,
-}
+// #[derive(Accounts)]
+// pub struct Simulate<'info> {
+//     #[account(mut)]
+//     pub payer: Signer<'info>,
+//     pub token_program: Program<'info, Token>,
+//     #[account(mut)]
+//     pub token_account: Account<'info, TokenAccount>,
+//     #[account(mut)]
+//     pub mint: Account<'info, Mint>,
+// }
 
-
+//
+// #[derive(Accounts)]
+// pub struct Simulate<'info> {
+//     #[account(mut)]
+//     pub payer: Signer<'info>,
+//     pub token_program: Program<'info, Token>,
+//     #[account(mut)]
+//     pub token_account: Account<'info, TokenAccount>,
+//     #[account(mut)]
+//     pub mint: Account<'info, Mint>,
+// }
+//
+//
 // #[derive(Accounts)]
 // pub struct CheckBalanceToken<'info> {
 //     #[account(mut)]
 //     pub token_account: Account<'info, TokenAccount>,
 // }
 
-#[event]
-pub struct TransferEvent {
-    pub from: Pubkey,
-    pub to: Vec<Pubkey>,
-    pub total_amount: u64,
-    pub fee: u64,
-}
+// #[event]
+// pub struct TransferEvent {
+//     pub from: Pubkey,
+//     pub to: Vec<Pubkey>,
+//     pub total_amount: u64,
+//     pub fee: u64,
+// }
 
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Overflow during calculation.")]
-    Overflow,
-    #[msg("Insufficient SOL funds to complete the transfer.")]
-    InsufficientFunds,
-    #[msg("Insufficient SPL Token balance to complete the transfer.")]
-    InsufficientTokenBalance,
-    #[msg("Insufficient SOL funds to cover the transfer fee.")]
-    InsufficientFundsForFee,
-    #[msg("Unauthorized access.")]
-    Unauthorized,
-}
-
+// #[error_code]
+// pub enum ErrorCode {
+//     #[msg("Overflow during calculation.")]
+//     Overflow,
+//     #[msg("Insufficient SOL funds to complete the transfer.")]
+//     InsufficientFunds,
+//     #[msg("Insufficient SPL Token balance to complete the transfer.")]
+//     InsufficientTokenBalance,
+//     #[msg("Insufficient SOL funds to cover the transfer fee.")]
+//     InsufficientFundsForFee,
+//     #[msg("Unauthorized access.")]
+//     Unauthorized,
+// }
 
 // Helper function: 求和并检查溢出
-fn safe_sum(transfers: &HashMap<Pubkey, u64>) -> std::result::Result<u64, ProgramError> {
-    transfers.values().try_fold(0u64, |acc, &value| {
-        acc.checked_add(value).ok_or(ProgramError::InvalidArgument)
-    })
-}
+// fn safe_sum(transfers: &HashMap<Pubkey, u64>) -> std::result::Result<u64, ProgramError> {
+//     transfers.values().try_fold(0u64, |acc, &value| {
+//         acc.checked_add(value).ok_or(ProgramError::InvalidArgument)
+//     })
+// }
 
-fn safe_add(a: u64, b: u64) -> std::result::Result<u64, ProgramError> {
-    a.checked_add(b).ok_or(ProgramError::InvalidArgument)
-}
+// fn safe_add(a: u64, b: u64) -> std::result::Result<u64, ProgramError> {
+//     a.checked_add(b).ok_or(ProgramError::InvalidArgument)
+// }
 
+//
+// #[error_code]
+// pub enum ErrorCode {
+//     #[msg("Overflow during calculation.")]
+//     Overflow,
+//     #[msg("Insufficient SOL funds to complete the transfer.")]
+//     InsufficientFunds,
+//     #[msg("Insufficient SPL Token balance to complete the transfer.")]
+//     InsufficientTokenBalance,
+//     #[msg("Insufficient SOL funds to cover the transfer fee.")]
+//     InsufficientFundsForFee,
+//     #[msg("Unauthorized access.")]
+//     Unauthorized,
+// }

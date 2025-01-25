@@ -9,19 +9,19 @@
 
 ```shell
 $ cargo version
-cargo 1.81.0 (2dbb1af80 2024-08-20)
+cargo 1.83.0 (5ffbef321 2024-10-29)
 $ rustc --version
-rustc 1.81.0 (eeb90cda1 2024-09-04)
+rustc 1.83.0 (90b35a623 2024-11-26)
 ```
 
 ```shell
 $ solana --version
-solana-cli 1.18.15 (src:767d24e5; feat:4215500110, client:SolanaLabs)
+solana-cli 2.1.8 (src:6ea38fce; feat:3039680930, client:Agave)
 ```
 
 ```shell
 $ solana-test-validator --version
-solana-test-validator 1.18.15 (src:767d24e5; feat:4215500110, client:SolanaLabs)
+solana-test-validator 2.1.8 (src:6ea38fce; feat:3039680930, client:Agave)
 ```
 
 ```shell
@@ -31,12 +31,12 @@ anchor-cli 0.30.1
 
 ```shell
 $ node --version
-v20.17.0
+v20.18.2
 ```
 
 ```shell
 $ npm --version
-10.8.2
+11.0.0
 ```
 
 ```shell
