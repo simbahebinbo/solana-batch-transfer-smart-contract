@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_error::ProgramError;
-use anchor_lang::solana_program::system_instruction;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_lang::solana_program::{system_instruction};
+use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 declare_id!("De1JkAKuuvfrMhKKai7u53w8Ap8ufvF2QPigQMSMTyEh");
 
@@ -15,9 +15,17 @@ pub mod batch_transfer {
      * @param admin 管理员地址
      */
     pub fn initialize(ctx: Context<Initialize>, admin: Pubkey) -> Result<()> {
+        require!(
+            ctx.accounts.deployer.key() == admin,
+            ErrorCode::Unauthorized
+        );
+
         let bank_account = &mut ctx.accounts.bank_account;
+        require!(!bank_account.is_initialized, ErrorCode::AlreadyInitialized);
+
         bank_account.admin = admin;
         bank_account.fee = 0; // 初始手续费设为0
+        bank_account.is_initialized = true;
         Ok(())
     }
 
@@ -55,12 +63,12 @@ pub mod batch_transfer {
         // 计算总转账金额
         let total_amount = safe_sum(&transfers)?;
         let fee = ctx.accounts.bank_account.fee;
-        let required_balance = safe_add(total_amount, fee)?;
+        let _required_balance = safe_add(total_amount, fee)?;
 
         // 检查发送者余额是否足够
         let sender_balance = ctx.accounts.sender.lamports();
         require!(
-            sender_balance >= required_balance,
+            sender_balance >= _required_balance,
             ErrorCode::InsufficientFunds
         );
 
@@ -70,11 +78,8 @@ pub mod batch_transfer {
         let system_program = &ctx.accounts.system_program;
 
         // 使用 system_program 转账手续费
-        let fee_ix = system_instruction::transfer(
-            &sender_info.key(),
-            &bank_account_info.key(),
-            fee
-        );
+        let fee_ix =
+            system_instruction::transfer(&sender_info.key(), &bank_account_info.key(), fee);
         anchor_lang::solana_program::program::invoke(
             &fee_ix,
             &[
@@ -91,12 +96,14 @@ pub mod batch_transfer {
                 .next()
                 .ok_or(ProgramError::NotEnoughAccountKeys)?;
 
-            // 使用 system_program 进行转账
-            let transfer_ix = system_instruction::transfer(
-                &sender_info.key(),
-                recipient,
-                *amount
+            // 验证接收者账户是否存在
+            require!(
+                recipient_account_info.key == recipient,
+                ErrorCode::InvalidRecipient
             );
+
+            // 使用 system_program 进行转账
+            let transfer_ix = system_instruction::transfer(&sender_info.key(), recipient, *amount);
             anchor_lang::solana_program::program::invoke(
                 &transfer_ix,
                 &[
@@ -135,7 +142,7 @@ pub mod batch_transfer {
         // 计算总转账金额
         let total_amount = safe_sum(&transfers)?;
         let fee = ctx.accounts.bank_account.fee;
-        let required_balance = safe_add(total_amount, fee)?;
+        let _required_balance = safe_add(total_amount, fee)?;
 
         // 检查发送者余额是否足够
         let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
@@ -155,11 +162,8 @@ pub mod batch_transfer {
         let system_program = &ctx.accounts.system_program;
 
         // 使用 system_program 转账手续费
-        let fee_ix = system_instruction::transfer(
-            &sender_info.key(),
-            &bank_account_info.key(),
-            fee
-        );
+        let fee_ix =
+            system_instruction::transfer(&sender_info.key(), &bank_account_info.key(), fee);
         anchor_lang::solana_program::program::invoke(
             &fee_ix,
             &[
@@ -203,32 +207,25 @@ pub mod batch_transfer {
 
         Ok(())
     }
-
-    // 查询账户余额的函数
-    pub fn check_balance_sol(ctx: Context<CheckBalanceSol>) -> Result<u64> {
-        let account_balance = **ctx.accounts.account.to_account_info().lamports.borrow();
-        Ok(account_balance)
-    }
-
-    pub fn check_balance_token(ctx: Context<CheckBalanceToken>) -> Result<u64> {
-        let token_balance = token::accessor::amount(&ctx.accounts.token_account.to_account_info())?;
-        Ok(token_balance)
-    }
-
-    pub fn simulate(_ctx: Context<Simulate>) -> Result<()> {
-        Ok(())
-    }
 }
 
 #[account]
+#[derive(Default)]
 pub struct BankAccount {
     pub admin: Pubkey, // 管理员地址
     pub fee: u64,      // 手续费金额
+    pub is_initialized: bool, // 是否已初始化
 }
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    #[account(init, payer = deployer, space = 8 + 32 + 8)]
+    #[account(
+        init,
+        payer = deployer,
+        space = 8 + 32 + 8 + 1, // 增加1字节存储is_initialized
+        seeds = [b"bank_account"],
+        bump
+    )]
     pub bank_account: Account<'info, BankAccount>,
     #[account(mut)]
     pub deployer: Signer<'info>,
@@ -237,7 +234,11 @@ pub struct Initialize<'info> {
 
 #[derive(Accounts)]
 pub struct SetFee<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"bank_account"],
+        bump
+    )]
     pub bank_account: Account<'info, BankAccount>,
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -248,7 +249,11 @@ pub struct BatchTransferSol<'info> {
     /// CHECK: 发送者账户，必须是签名者且可变
     #[account(mut)]
     pub sender: Signer<'info>,
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"bank_account"],
+        bump
+    )]
     pub bank_account: Account<'info, BankAccount>,
     pub system_program: Program<'info, System>,
 }
@@ -257,35 +262,19 @@ pub struct BatchTransferSol<'info> {
 pub struct BatchTransferToken<'info> {
     #[account(mut)]
     pub sender: Signer<'info>,
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"bank_account"],
+        bump
+    )]
     pub bank_account: Account<'info, BankAccount>,
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = token_account.owner == sender.key()
+    )]
     pub token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct CheckBalanceSol<'info> {
-    #[account(mut)]
-    pub account: SystemAccount<'info>,
-}
-
-#[derive(Accounts)]
-pub struct Simulate<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    #[account(mut)]
-    pub token_account: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub mint: Account<'info, Mint>,
-}
-
-#[derive(Accounts)]
-pub struct CheckBalanceToken<'info> {
-    #[account(mut)]
-    pub token_account: Account<'info, TokenAccount>,
 }
 
 /**
@@ -333,6 +322,10 @@ pub enum ErrorCode {
     Unauthorized,
     #[msg("转账列表不能为空")]
     EmptyTransfers,
+    #[msg("账户已初始化")]
+    AlreadyInitialized,
+    #[msg("接收者账户无效")]
+    InvalidRecipient,
 }
 
 /// 安全求和函数，防止溢出
