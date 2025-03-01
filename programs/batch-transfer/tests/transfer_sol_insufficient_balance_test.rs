@@ -1,6 +1,5 @@
 use anchor_client::solana_sdk::signature::{Keypair, Signer};
 use batch_transfer::{self, safe_add, safe_sum_transfer_info, TransferInfo, ErrorCode};
-use anchor_lang::prelude::*;
 
 mod utils_test;
 use utils_test::{get_test_program, get_bank_account};
@@ -13,12 +12,12 @@ fn test_insufficient_balance() {
     
     // 创建管理员、发送者和接收者账户
     let admin = Keypair::new();
-    let sender = Keypair::new();
+    let _sender = Keypair::new();
     let recipient1 = Keypair::new();
     let recipient2 = Keypair::new();
     
     // 获取银行账户的PDA
-    let (bank_account, _) = get_bank_account(&program.id());
+    let (_bank_account, _) = get_bank_account(&program.id());
     
     println!("开始测试余额不足的情况");
     
@@ -72,7 +71,7 @@ fn test_insufficient_balance() {
     // 在我们的单元测试中，我们验证余额不足时会返回正确的错误
     if !sufficient_balance {
         println!("检测到余额不足 - 转账将失败");
-        let error = ErrorCode::InsufficientFunds;
+        let _error = ErrorCode::InsufficientFunds;
         // 在实际代码中，这里会返回错误并终止交易
     }
     
@@ -81,7 +80,7 @@ fn test_insufficient_balance() {
     assert_eq!(sender_balance, expected_sender_balance, "发送者余额不应改变");
     
     // 接收者的余额应该保持为0（或未初始化）
-    let expected_recipient_balance = 0;
+    let _expected_recipient_balance = 0;
     
     println!("余额不足测试完成");
 } 

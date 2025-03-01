@@ -82,6 +82,7 @@ pub fn get_test_program() -> (Program<Rc<Keypair>>, Rc<Keypair>) {
     (program, payer_clone)
 }
 
+#[allow(dead_code)]
 pub fn get_bank_account(program_id: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[b"bank_account"], program_id)
 }
@@ -95,6 +96,7 @@ pub mod test_utils {
     use batch_transfer::TransferInfo;
     
     // 初始化银行账户
+    #[allow(dead_code)]
     pub async fn initialize_bank_account(
         program: &Program<Rc<Keypair>>,
         admin: &Keypair,
@@ -119,6 +121,7 @@ pub mod test_utils {
     }
     
     // 设置费用
+    #[allow(dead_code)]
     pub async fn set_fee(
         program: &Program<Rc<Keypair>>,
         admin: &Keypair,
@@ -143,6 +146,7 @@ pub mod test_utils {
     }
     
     // 批量转账SOL
+    #[allow(dead_code)]
     pub async fn batch_transfer_sol(
         program: &Program<Rc<Keypair>>,
         sender: &Keypair,
@@ -187,6 +191,7 @@ pub mod test_utils {
     }
     
     // 资金请求 - 使用 anchor_client 的 RPC 客户端
+    #[allow(dead_code)]
     pub async fn request_airdrop(
         program: &Program<Rc<Keypair>>,
         pubkey: &Pubkey,
@@ -205,6 +210,7 @@ pub mod test_utils {
     }
     
     // 获取账户余额
+    #[allow(dead_code)]
     pub async fn get_account_balance(
         program: &Program<Rc<Keypair>>,
         pubkey: &Pubkey,
@@ -219,6 +225,7 @@ pub mod test_utils {
     }
     
     // 获取账户数据
+    #[allow(dead_code)]
     pub async fn get_account_data<T: AccountDeserialize>(
         program: &Program<Rc<Keypair>>,
         pubkey: &Pubkey,
@@ -230,6 +237,7 @@ pub mod test_utils {
     }
     
     // 添加阻塞版本的函数
+    #[allow(dead_code)]
     pub fn request_airdrop_blocking(
         program: &Program<Rc<Keypair>>,
         pubkey: &Pubkey,
@@ -259,6 +267,8 @@ pub mod test_utils {
         Ok(())
     }
     
+    // 初始化银行账户（阻塞版）
+    #[allow(dead_code)]
     pub fn initialize_bank_account_blocking(
         program: &Program<Rc<Keypair>>,
         admin: &Keypair,
@@ -283,6 +293,8 @@ pub mod test_utils {
         Ok(())
     }
     
+    // 设置费用（阻塞版）
+    #[allow(dead_code)]
     pub fn set_fee_blocking(
         program: &Program<Rc<Keypair>>,
         admin: &Keypair,
