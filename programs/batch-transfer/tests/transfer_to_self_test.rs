@@ -1,10 +1,7 @@
-use anchor_client::{
-    solana_sdk::{
+use anchor_client::solana_sdk::{
         signature::{Keypair, Signer},
         native_token::LAMPORTS_PER_SOL,
-        program_error::ProgramError,
-    },
-};
+    };
 use batch_transfer::{self, TransferInfo};
 
 mod utils_test;

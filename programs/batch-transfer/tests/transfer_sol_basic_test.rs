@@ -1,9 +1,4 @@
-use anchor_client::{
-    solana_sdk::{
-        signature::{Keypair, Signer},
-        pubkey::Pubkey,
-    },
-};
+use anchor_client::solana_sdk::signature::{Keypair, Signer};
 use batch_transfer::{self, safe_add, safe_sum_transfer_info, TransferInfo};
 use anchor_lang::prelude::*;
 
@@ -32,7 +27,7 @@ fn test_batch_transfer_sol() {
     println!("开始模拟批量转账测试");
     
     // 模拟银行账户状态
-    let mut bank_account_data = batch_transfer::BankAccount {
+    let bank_account_data = batch_transfer::BankAccount {
         admin: admin.pubkey(),
         fee: 100, // 设置费用为1% (100 basis points)
         is_initialized: true,

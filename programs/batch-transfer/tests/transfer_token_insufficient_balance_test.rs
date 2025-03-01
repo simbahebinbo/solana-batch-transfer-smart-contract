@@ -1,14 +1,9 @@
-use anchor_client::{
-    solana_sdk::{
+use anchor_client::solana_sdk::{
         signature::{Keypair, Signer},
-        pubkey::Pubkey,
-        system_program,
         program_error::ProgramError,
-    },
-};
-use batch_transfer::{self, safe_add, safe_sum_transfer_info, TransferInfo, ErrorCode};
+    };
+use batch_transfer::{self, safe_sum_transfer_info, TransferInfo};
 use anchor_lang::prelude::*;
-use anchor_spl::token::{TokenAccount, Token};
 
 mod utils_test;
 use utils_test::{get_test_program, get_bank_account};

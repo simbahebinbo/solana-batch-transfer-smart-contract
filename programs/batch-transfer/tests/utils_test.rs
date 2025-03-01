@@ -7,14 +7,10 @@ use anchor_client::{
         system_program,
         AccountDeserialize,
     },
-    // 从 anchor_client 引入需要的类型（而不是直接使用 solana-sdk）
-    solana_client::rpc_client::RpcClient,
     solana_sdk::{
         signature::{Keypair, Signer},
         pubkey::Pubkey,
         instruction::AccountMeta,
-        commitment_config::CommitmentConfig,
-        native_token::LAMPORTS_PER_SOL,
     },
 };
 use std::rc::Rc;

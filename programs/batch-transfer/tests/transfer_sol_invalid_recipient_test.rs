@@ -4,8 +4,7 @@ use anchor_client::{
         pubkey::Pubkey,
     },
 };
-use batch_transfer::{self, safe_add, safe_sum_transfer_info, TransferInfo, ErrorCode};
-use anchor_lang::prelude::*;
+use batch_transfer::{self, safe_add, TransferInfo};
 
 mod utils_test;
 use utils_test::get_test_program;

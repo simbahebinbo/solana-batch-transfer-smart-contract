@@ -1,9 +1,4 @@
-use anchor_client::{
-    solana_sdk::{
-        signature::{Keypair, Signer},
-        pubkey::Pubkey,
-    },
-};
+use anchor_client::solana_sdk::signature::{Keypair, Signer};
 use batch_transfer::{self, safe_add, safe_sum_transfer_info, TransferInfo, ErrorCode};
 use anchor_lang::prelude::*;
 

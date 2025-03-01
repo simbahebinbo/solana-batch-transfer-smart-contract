@@ -4,7 +4,7 @@ use anchor_client::{
     },
 };
 use batch_transfer;
-use anchor_lang::{prelude::*, AccountDeserialize};
+use anchor_lang::prelude::*;
 
 mod utils_test;
 use utils_test::{get_test_program, get_bank_account};

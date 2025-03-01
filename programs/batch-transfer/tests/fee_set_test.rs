@@ -1,11 +1,5 @@
-use anchor_client::{
-    solana_sdk::{
-        signature::{Keypair, Signer},
-        native_token::LAMPORTS_PER_SOL,
-    },
-};
+use anchor_client::solana_sdk::signature::Keypair;
 use batch_transfer;
-use anchor_lang::AccountDeserialize;
 
 mod utils_test;
 use utils_test::{get_test_program, get_bank_account};

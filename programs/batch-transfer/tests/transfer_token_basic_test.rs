@@ -1,13 +1,6 @@
-use anchor_client::{
-    solana_sdk::{
-        signature::{Keypair, Signer},
-        pubkey::Pubkey,
-        system_program,
-    },
-};
-use batch_transfer::{self, safe_add, safe_sum_transfer_info, TransferInfo};
+use anchor_client::solana_sdk::signature::{Keypair, Signer};
+use batch_transfer::{self, safe_sum_transfer_info, TransferInfo};
 use anchor_lang::prelude::*;
-use anchor_spl::token::{TokenAccount, Token};
 
 mod utils_test;
 use utils_test::{get_test_program, get_bank_account};
@@ -38,7 +31,7 @@ fn test_batch_transfer_token_basic() {
     println!("开始模拟SPL Token批量转账测试");
     
     // 模拟银行账户状态
-    let mut bank_account_data = batch_transfer::BankAccount {
+    let bank_account_data = batch_transfer::BankAccount {
         admin: admin.pubkey(),
         fee: 100, // 设置费用为1% (100 basis points)
         is_initialized: true,

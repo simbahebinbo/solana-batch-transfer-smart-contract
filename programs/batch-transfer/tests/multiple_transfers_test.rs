@@ -67,7 +67,7 @@ fn test_multiple_transfers() {
     println!("第一次转账手续费: {} lamports", first_fee);
     
     // 更新余额
-    current_sender_balance -= (first_total_amount + first_fee);
+    current_sender_balance -= first_total_amount + first_fee;
     recipient1_balance += LAMPORTS_PER_SOL;
     recipient2_balance += LAMPORTS_PER_SOL / 2;
     bank_balance += first_fee;
@@ -99,7 +99,7 @@ fn test_multiple_transfers() {
     println!("第二次转账手续费: {} lamports", second_fee);
     
     // 更新余额
-    current_sender_balance -= (second_total_amount + second_fee);
+    current_sender_balance -= second_total_amount + second_fee;
     recipient2_balance += LAMPORTS_PER_SOL / 4;
     recipient3_balance += LAMPORTS_PER_SOL * 2;
     bank_balance += second_fee;

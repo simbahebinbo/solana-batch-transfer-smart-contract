@@ -1,11 +1,8 @@
-use anchor_client::{
-    solana_sdk::{
-        signature::{Keypair, Signer},
+use anchor_client::solana_sdk::{
+        signature::Keypair,
         pubkey::Pubkey,
-    },
-};
+    };
 use batch_transfer::{self, ErrorCode};
-use anchor_lang::prelude::*;
 
 mod utils_test;
 use utils_test::get_test_program;
