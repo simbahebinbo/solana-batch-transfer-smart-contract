@@ -18,16 +18,16 @@ fn test_transfer_zero_amount() {
     
     // 创建测试账户
     let admin = Keypair::new();
-    let sender = Keypair::new();
+    let _sender = Keypair::new();
     let recipient = Keypair::new();
     
     // 获取银行账户PDA
-    let (bank_account, _) = get_bank_account(&program.id());
+    let (_bank_account, _) = get_bank_account(&program.id());
     
     println!("开始测试转账金额为0的情况");
     
     // 模拟银行账户状态
-    let bank_account_data = batch_transfer::BankAccount {
+    let _bank_account_data = batch_transfer::BankAccount {
         admin: admin.pubkey(),
         fee: 100, // 设置费用为1% (100 basis points)
         is_initialized: true,
@@ -38,7 +38,7 @@ fn test_transfer_zero_amount() {
     println!("发送者余额: {} lamports", sender_balance);
     
     // 准备转账数据 - 金额为0
-    let transfers = vec![TransferInfo {
+    let _transfers = vec![TransferInfo {
         recipient: recipient.pubkey(),
         amount: 0, // 金额为0
     }];

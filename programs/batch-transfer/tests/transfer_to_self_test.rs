@@ -18,7 +18,7 @@ fn test_transfer_to_self() {
     let sender = Keypair::new();
     
     // 获取银行账户PDA
-    let (bank_account, _) = get_bank_account(&program.id());
+    let (_bank_account, _) = get_bank_account(&program.id());
     
     println!("开始测试转账给自己的情况");
     
@@ -35,7 +35,7 @@ fn test_transfer_to_self() {
     
     // 准备转账数据 - 收款人是发送者自己
     let transfer_amount = LAMPORTS_PER_SOL / 10; // 0.1 SOL
-    let transfers = vec![TransferInfo {
+    let _transfers = vec![TransferInfo {
         recipient: sender.pubkey(), // 收款人是发送者自己
         amount: transfer_amount,
     }];

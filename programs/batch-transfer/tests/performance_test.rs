@@ -11,6 +11,22 @@ mod utils_test;
 use utils_test::{get_test_program, get_bank_account};
 
 /// 测试大量转账的性能
+/// 
+/// 这个测试评估批量转账智能合约在处理大量转账时的性能表现：
+/// 1. 创建100个接收者账户
+/// 2. 为每个接收者准备0.01 SOL的转账
+/// 3. 模拟计算手续费和转账执行过程
+/// 4. 记录准备和执行所需的时间
+/// 
+/// 测试的主要指标包括：
+/// - 准备转账数据所需时间
+/// - 执行批量转账所需时间
+/// - 每笔转账的平均处理时间
+/// - 总转账金额和总手续费
+/// 
+/// 预期结果：
+/// - 所有转账能够成功处理
+/// - 最终余额计算正确（发送者余额、接收者余额、银行账户余额）
 #[test]
 fn test_large_batch_performance() {
     // 获取程序和支付者
@@ -41,7 +57,7 @@ fn test_large_batch_performance() {
     println!("创建 {} 个接收者", num_recipients);
     
     let mut recipients = vec![];
-    for i in 0..num_recipients {
+    for _i in 0..num_recipients {
         recipients.push(Keypair::new());
     }
     

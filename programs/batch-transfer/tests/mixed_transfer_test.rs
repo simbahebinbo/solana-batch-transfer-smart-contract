@@ -1,16 +1,28 @@
-use anchor_client::{
-    solana_sdk::{
+use anchor_client::solana_sdk::{
         signature::{Keypair, Signer},
         native_token::LAMPORTS_PER_SOL,
-        program_error::ProgramError,
-    },
-};
+    };
 use batch_transfer::{self, TransferInfo};
 
 mod utils_test;
 use utils_test::{get_test_program, get_bank_account};
 
 /// 测试混合转账类型（同时测试SOL和Token）
+/// 
+/// 这个测试验证批量转账智能合约是否能同时正确处理SOL和Token转账：
+/// 1. 模拟一个银行账户，设置1%的手续费率
+/// 2. 使用相同的发送者账户执行SOL转账和Token转账
+/// 3. 分别验证SOL和Token转账后的余额变化
+/// 
+/// 测试的主要验证点包括：
+/// - SOL转账后发送者、接收者和银行账户的余额变化
+/// - Token转账后发送者、接收者和银行账户的余额变化
+/// - 手续费计算在两种转账类型中是否一致
+/// 
+/// 预期结果：
+/// - 两种类型的转账都能成功执行
+/// - 所有余额计算正确
+/// - 手续费正确收取并记录到银行账户
 #[test]
 fn test_mixed_transfers() {
     // 获取程序和支付者
