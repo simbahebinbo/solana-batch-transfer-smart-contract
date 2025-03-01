@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
-# anchor run test_ts
-anchor run test_rs
+# 运行测试
+anchor test

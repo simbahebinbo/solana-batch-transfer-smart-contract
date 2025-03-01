@@ -47,15 +47,14 @@ $ yarn --version
 * 编译
 
 ```shell
-$ anchor build --arch sbf
+$ anchor build
 ```
 
 * 运行单元测试
 
 ```shell
 $ yarn install
-$ anchor test --arch sbf
-$ cargo test-sbf
+$ anchor test 
 ```
 
 * 启动 solana 本地测试节点

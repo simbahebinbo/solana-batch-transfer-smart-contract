@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_error::ProgramError;
 use anchor_spl::token::{self, Token, TokenAccount};
 
-declare_id!("De1JkAKuuvfrMhKKai7u53w8Ap8ufvF2QPigQMSMTyEh");
+declare_id!("CRYsXNCjnhR1dgrpd3rEtY8ec7DNKa2659iCaN5tatXK");
 
 #[program]
 pub mod batch_transfer {
@@ -46,7 +46,7 @@ pub mod batch_transfer {
     /**
      * @notice 批量转账SOL
      * @param ctx 上下文
-     * @param transfers 转账信息，包含接收地址和转账金额的结构体数组
+     * @param transfers 转账信息数组
      */
     pub fn batch_transfer_sol<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BatchTransferSol<'info>>, 
@@ -122,7 +122,7 @@ pub mod batch_transfer {
     /**
      * @notice 批量转账SPL Token
      * @param ctx 上下文
-     * @param transfers 转账信息，包含接收地址和转账金额的结构体数组
+     * @param transfers 转账信息数组
      */
     pub fn batch_transfer_token<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BatchTransferToken<'info>>, 
@@ -329,13 +329,13 @@ pub enum ErrorCode {
 }
 
 /// 安全求和函数，防止溢出
-fn safe_sum_transfer_info(transfers: &Vec<TransferInfo>) -> std::result::Result<u64, ProgramError> {
+pub fn safe_sum_transfer_info(transfers: &Vec<TransferInfo>) -> std::result::Result<u64, ProgramError> {
     transfers.iter().try_fold(0u64, |acc, info| {
         acc.checked_add(info.amount).ok_or(ProgramError::InvalidArgument)
     })
 }
 
 /// 安全加法函数，防止溢出
-fn safe_add(a: u64, b: u64) -> std::result::Result<u64, ProgramError> {
+pub fn safe_add(a: u64, b: u64) -> std::result::Result<u64, ProgramError> {
     a.checked_add(b).ok_or(ProgramError::InvalidArgument)
 }

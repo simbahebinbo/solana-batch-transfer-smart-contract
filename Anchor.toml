@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-batch_transfer = "De1JkAKuuvfrMhKKai7u53w8Ap8ufvF2QPigQMSMTyEh"
+batch_transfer = "CRYsXNCjnhR1dgrpd3rEtY8ec7DNKa2659iCaN5tatXK"
 
 [registry]
 url = "https://api.apr.dev"
@@ -16,6 +16,4 @@ cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-test_ts = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-test_rs = "cargo test-sbf --manifest-path=programs/batch-transfer/Cargo.toml"
+test = "cargo test-sbf --manifest-path=programs/batch-transfer/Cargo.toml"
