@@ -11,8 +11,13 @@ use anchor_spl::token::{self};
 use spl_token::state::Account as TokenAccount;
 use spl_token::state::Mint;
 use spl_token::instruction as token_instruction;
+use solana_program::{
+    rent::Rent,
+    system_instruction,
+    sysvar::SysvarId,
+};
+use batch_transfer::TransferInfo;
 use spl_token::solana_program::program_pack::Pack;
-
 
 /// 将 Solana SDK 的 Pubkey 转换为 SPL Token 的 Pubkey
 fn to_token_pubkey(pubkey: &Pubkey) -> spl_token::solana_program::pubkey::Pubkey {
@@ -238,8 +243,14 @@ async fn test_insufficient_balance() {
 
     // 尝试转账超过余额的金额
     let transfers = vec![
-        (recipient1_token.pubkey(), 2_000_000),
-        (recipient2_token.pubkey(), 3_000_000),
+        TransferInfo {
+            recipient: recipient1_token.pubkey(),
+            amount: 2_000_000,
+        },
+        TransferInfo {
+            recipient: recipient2_token.pubkey(),
+            amount: 3_000_000,
+        },
     ];
 
     let mut accounts = batch_transfer::accounts::BatchTransferToken {
@@ -252,7 +263,7 @@ async fn test_insufficient_balance() {
     .to_account_metas(None);
 
     // 添加接收者账户作为 remaining accounts
-    accounts.extend(transfers.iter().map(|(pubkey, _)| AccountMeta::new(*pubkey, false)));
+    accounts.extend(transfers.iter().map(|info| AccountMeta::new(info.recipient, false)));
 
     let batch_transfer_token_ix = Instruction {
         program_id: batch_transfer::ID,

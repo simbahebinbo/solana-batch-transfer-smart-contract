@@ -7,6 +7,7 @@ use solana_sdk::transaction::Transaction;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use anchor_lang::{InstructionData, ToAccountMetas};
 use solana_sdk::account::Account;
+use batch_transfer::TransferInfo;
 
 
 /// 测试空转账列表的情况

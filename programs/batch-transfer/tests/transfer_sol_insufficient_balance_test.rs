@@ -7,6 +7,7 @@ use solana_sdk::transaction::Transaction;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use anchor_lang::{InstructionData, ToAccountMetas};
 use solana_sdk::account::Account;
+use batch_transfer::TransferInfo;
 
 
 /// 测试余额不足的情况
@@ -98,8 +99,14 @@ async fn test_insufficient_balance() {
     let transfer_amount2 = LAMPORTS_PER_SOL * 3; // 3 SOL
 
     let transfers = vec![
-        (recipient1.pubkey(), transfer_amount1),
-        (recipient2.pubkey(), transfer_amount2),
+        TransferInfo {
+            recipient: recipient1.pubkey(),
+            amount: transfer_amount1,
+        },
+        TransferInfo {
+            recipient: recipient2.pubkey(),
+            amount: transfer_amount2,
+        },
     ];
 
     let mut accounts = batch_transfer::accounts::BatchTransferSol {
@@ -110,7 +117,7 @@ async fn test_insufficient_balance() {
     .to_account_metas(None);
 
     // 添加接收者账户
-    accounts.extend(transfers.iter().map(|(pubkey, _)| AccountMeta::new(*pubkey, false)));
+    accounts.extend(transfers.iter().map(|info| AccountMeta::new(info.recipient, false)));
 
     let batch_transfer_ix = Instruction {
         program_id: batch_transfer::ID,

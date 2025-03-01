@@ -2,7 +2,10 @@
   "compilerOptions": {
     "types": [
       "mocha",
-      "chai"
+      "chai",
+      "node",
+      "jest",
+      "bn.js"
     ],
     "typeRoots": [
       "./node_modules/@types"

@@ -11,6 +11,12 @@ use anchor_spl::token::{self};
 use spl_token::state::Account as TokenAccount;
 use spl_token::state::Mint;
 use spl_token::instruction as token_instruction;
+use solana_program::{
+    rent::Rent,
+    system_instruction,
+    sysvar::SysvarId,
+};
+use batch_transfer::TransferInfo;
 use spl_token::solana_program::program_pack::Pack;
 
 
@@ -236,8 +242,14 @@ async fn test_invalid_recipient() {
 
     // 尝试转账到无效账户
     let transfers = vec![
-        (recipient1_token.pubkey(), 1_000_000),
-        (invalid_recipient, 2_000_000),
+        TransferInfo {
+            recipient: recipient1_token.pubkey(),
+            amount: 1_000_000,
+        },
+        TransferInfo {
+            recipient: invalid_recipient,
+            amount: 2_000_000,
+        },
     ];
 
     let mut accounts = batch_transfer::accounts::BatchTransferToken {
@@ -250,7 +262,7 @@ async fn test_invalid_recipient() {
     .to_account_metas(None);
 
     // 添加接收者账户作为 remaining accounts
-    accounts.extend(transfers.iter().map(|(pubkey, _)| AccountMeta::new(*pubkey, false)));
+    accounts.extend(transfers.iter().map(|info| AccountMeta::new(info.recipient, false)));
 
     let batch_transfer_token_ix = Instruction {
         program_id: batch_transfer::ID,

@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
 
-anchor test --arch sbf
-
-cargo test-sbf
+# anchor run test_ts
+anchor run test_rs

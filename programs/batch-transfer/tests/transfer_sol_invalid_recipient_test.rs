@@ -7,6 +7,7 @@ use solana_sdk::transaction::Transaction;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use anchor_lang::{InstructionData, ToAccountMetas};
 use solana_sdk::account::Account;
+use batch_transfer::TransferInfo;
 
 
 /// 测试无效接收者的情况
@@ -102,8 +103,14 @@ async fn test_invalid_recipient() {
 
     // 尝试转账到无效账户
     let transfers = vec![
-        (recipient1.pubkey(), 1 * LAMPORTS_PER_SOL),
-        (invalid_recipient, 2 * LAMPORTS_PER_SOL),
+        TransferInfo {
+            recipient: recipient1.pubkey(),
+            amount: 1 * LAMPORTS_PER_SOL,
+        },
+        TransferInfo {
+            recipient: invalid_recipient,
+            amount: 2 * LAMPORTS_PER_SOL,
+        },
     ];
 
     let mut accounts = batch_transfer::accounts::BatchTransferSol {
@@ -114,7 +121,7 @@ async fn test_invalid_recipient() {
     .to_account_metas(None);
 
     // 添加接收者账户
-    accounts.extend(transfers.iter().map(|(pubkey, _)| AccountMeta::new(*pubkey, false)));
+    accounts.extend(transfers.iter().map(|info| AccountMeta::new(info.recipient, false)));
 
     let batch_transfer_ix = Instruction {
         program_id: batch_transfer::ID,

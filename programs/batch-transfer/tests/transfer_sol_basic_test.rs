@@ -7,6 +7,7 @@ use solana_sdk::transaction::Transaction;
 use solana_sdk::native_token::LAMPORTS_PER_SOL;
 use anchor_lang::{InstructionData, ToAccountMetas};
 use solana_sdk::account::Account;
+use batch_transfer::TransferInfo;
 
 
 /// 测试SOL批量转账功能
@@ -94,8 +95,14 @@ async fn test_batch_transfer_sol() {
 
     // 执行批量转账
     let transfers = vec![
-        (recipient1.pubkey(), 1 * LAMPORTS_PER_SOL),
-        (recipient2.pubkey(), 2 * LAMPORTS_PER_SOL),
+        TransferInfo {
+            recipient: recipient1.pubkey(),
+            amount: 1 * LAMPORTS_PER_SOL,
+        },
+        TransferInfo {
+            recipient: recipient2.pubkey(),
+            amount: 2 * LAMPORTS_PER_SOL,
+        },
     ];
 
     let mut accounts = batch_transfer::accounts::BatchTransferSol {
@@ -106,7 +113,7 @@ async fn test_batch_transfer_sol() {
     .to_account_metas(None);
 
     // 添加接收者账户
-    accounts.extend(transfers.iter().map(|(pubkey, _)| AccountMeta::new(*pubkey, false)));
+    accounts.extend(transfers.iter().map(|info| AccountMeta::new(info.recipient, false)));
 
     let batch_transfer_ix = Instruction {
         program_id: batch_transfer::ID,
