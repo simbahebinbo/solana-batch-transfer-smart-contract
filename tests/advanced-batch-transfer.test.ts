@@ -2,10 +2,8 @@ import * as anchor from "@coral-xyz/anchor";
 import {Program} from "@coral-xyz/anchor";
 import {expect, assert} from "chai";
 import {BatchTransfer} from "../target/types/batch_transfer";
-import {Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram} from "@solana/web3.js";
-import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
 import BN from "bn.js";
-import {createTestToken, getTestTokenAccount, initializeTestAccounts, mintTestTokens, sleep} from "./helper";
+import {createTestToken, getTestTokenAccount, initializeTestAccounts, mintTestTokens, LAMPORTS_PER_SOL, sleep} from "./helper";
 
 describe("批量转账智能合约高级测试", () => {
     // 配置测试环境
@@ -15,18 +13,18 @@ describe("批量转账智能合约高级测试", () => {
     const program = anchor.workspace.BatchTransfer as Program<BatchTransfer>;
 
     // 测试数据
-    let admin: Keypair;
-    let sender: Keypair;
-    let recipients: Keypair[] = [];
+    let admin: anchor.web3.Keypair;
+    let sender: anchor.web3.Keypair;
+    let recipients: anchor.web3.Keypair[] = [];
 
     // 批量转账账户PDA
-    let bankAccountPDA: PublicKey;
+    let bankAccountPDA: anchor.web3.PublicKey;
     let bankAccountBump: number;
 
     // SPL Token相关
-    let mint: PublicKey;
-    let senderTokenAccount: PublicKey;
-    let recipientTokenAccounts: PublicKey[] = [];
+    let mint: anchor.web3.PublicKey;
+    let senderTokenAccount: anchor.web3.PublicKey;
+    let recipientTokenAccounts: anchor.web3.PublicKey[] = [];
 
     // 测试金额
     const smallFee = new BN(0.005 * LAMPORTS_PER_SOL);
@@ -42,7 +40,7 @@ describe("批量转账智能合约高级测试", () => {
         await sleep(1000);
 
         // 查找批量转账账户PDA
-        const [pda, bump] = await PublicKey.findProgramAddress(
+        const [pda, bump] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from("bank_account")],
             program.programId
         );
@@ -58,7 +56,7 @@ describe("批量转账智能合约高级测试", () => {
                 .accounts({
                     bankAccount: bankAccountPDA,
                     deployer: admin.publicKey,
-                    systemProgram: SystemProgram.programId,
+                    systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .signers([admin])
                 .rpc();
@@ -138,7 +136,7 @@ describe("批量转账智能合约高级测试", () => {
                 .accounts({
                     sender: sender.publicKey,
                     bankAccount: bankAccountPDA,
-                    systemProgram: SystemProgram.programId,
+                    systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .remainingAccounts([
                     {
@@ -190,7 +188,7 @@ describe("批量转账智能合约高级测试", () => {
                 .accounts({
                     sender: sender.publicKey,
                     bankAccount: bankAccountPDA,
-                    systemProgram: SystemProgram.programId,
+                    systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .remainingAccounts([
                     {
@@ -250,7 +248,7 @@ describe("批量转账智能合约高级测试", () => {
                 .accounts({
                     sender: sender.publicKey,
                     bankAccount: bankAccountPDA,
-                    systemProgram: SystemProgram.programId,
+                    systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .remainingAccounts(
                     recipients.slice(2, 10).map(recipient => ({
@@ -303,10 +301,10 @@ describe("批量转账智能合约高级测试", () => {
                 // @ts-ignore
                 .accounts({
                     sender: sender.publicKey,
-                    bankAccount: bankAccountPDA,
                     tokenAccount: senderTokenAccount,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    systemProgram: SystemProgram.programId,
+                    bankAccount: bankAccountPDA,
+                    tokenProgram: anchor.web3.TOKEN_PROGRAM_ID,
+                    systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .remainingAccounts(
                     recipientTokenAccounts.slice(0, 5).map(account => ({
@@ -388,7 +386,7 @@ describe("批量转账智能合约高级测试", () => {
                     .accounts({
                         sender: sender.publicKey,
                         bankAccount: bankAccountPDA,
-                        systemProgram: SystemProgram.programId,
+                        systemProgram: anchor.web3.SystemProgram.programId,
                     })
                     .remainingAccounts([
                         {
@@ -438,7 +436,7 @@ describe("批量转账智能合约高级测试", () => {
                 .accounts({
                     sender: sender.publicKey,
                     bankAccount: bankAccountPDA,
-                    systemProgram: SystemProgram.programId,
+                    systemProgram: anchor.web3.SystemProgram.programId,
                 })
                 .remainingAccounts([
                     {
@@ -473,7 +471,7 @@ describe("批量转账智能合约高级测试", () => {
                 const transferFee = new BN(smallFee);
                 
                 // 创建一个接收者
-                const recipient = Keypair.generate();
+                const recipient = anchor.web3.Keypair.generate();
                 
                 // 构建转账信息
                 const transferInfo = {
@@ -486,7 +484,7 @@ describe("批量转账智能合约高级测试", () => {
                     .transferSol(transferInfo, transferFee)
                     .accounts({
                         sender: provider.wallet.publicKey,
-                        systemProgram: SystemProgram.programId,
+                        systemProgram: anchor.web3.SystemProgram.programId,
                         bankAccount: bankAccountPDA,
                     })
                     .rpc();
@@ -523,7 +521,7 @@ describe("批量转账智能合约高级测试", () => {
                     .transferToken(transferInfo, transferFee)
                     .accounts({
                         sender: provider.wallet.publicKey,
-                        tokenProgram: TOKEN_PROGRAM_ID,
+                        tokenProgram: anchor.web3.TOKEN_PROGRAM_ID,
                         senderTokenAccount: senderTokenAccount,
                         bankAccount: bankAccountPDA,
                     })
@@ -536,6 +534,59 @@ describe("批量转账智能合约高级测试", () => {
                 // 确保抛出了合适的错误
                 expect(err.toString()).to.include("Error");
             }
+        });
+    });
+
+    describe("SPL代币批量转账测试", () => {
+        it("成功批量转账SPL代币使用batchTransferToken", async () => {
+            // 记录转账前的余额
+            const recipient1 = recipients[0];
+            const recipient1TokenAccount = recipientTokenAccounts[0];
+            const initialRecipientBalance = await provider.connection.getTokenAccountBalance(recipient1TokenAccount);
+            const initialBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+            
+            // 准备转账数据
+            const amount = new anchor.BN(0.1 * LAMPORTS_PER_SOL);
+            const transfers = [
+                {
+                    recipient: recipient1TokenAccount,
+                    amount: amount,
+                },
+            ];
+            
+            // 调用批量转账Token指令
+            await program.methods
+                .batchTransferToken(transfers)
+                // @ts-ignore - Anchor类型错误，但实际是有效的
+                .accounts({
+                    sender: sender.publicKey,
+                    tokenAccount: senderTokenAccount,
+                    bankAccount: bankAccountPDA,
+                    tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+                    systemProgram: anchor.web3.SystemProgram.programId,
+                })
+                .remainingAccounts([
+                    {
+                        pubkey: recipient1TokenAccount,
+                        isWritable: true,
+                        isSigner: false,
+                    },
+                ])
+                .signers([sender])
+                .rpc();
+                
+            // 验证转账结果
+            const finalRecipientBalance = await provider.connection.getTokenAccountBalance(recipient1TokenAccount);
+            const finalBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+            
+            // 验证接收者收到了正确金额的代币
+            expect(
+                new BN(finalRecipientBalance.value.amount).sub(new BN(initialRecipientBalance.value.amount))
+            ).to.eql(amount);
+            
+            // 验证银行账户收到了手续费
+            const bankAccount = await program.account.bankAccount.fetch(bankAccountPDA);
+            expect(finalBankAccountBalance - initialBankAccountBalance).to.equal(bankAccount.fee.toNumber());
         });
     });
 }); 
