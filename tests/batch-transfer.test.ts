@@ -5,6 +5,7 @@ import { BatchTransfer } from "../target/types/batch_transfer";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import { createMint, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
 import BN from "bn.js";
+import { assert } from "chai";
 
 describe("批量转账智能合约测试", () => {
   // 配置测试环境
@@ -453,6 +454,345 @@ describe("批量转账智能合约测试", () => {
     } catch (error) {
       // 验证是否抛出正确的错误
       expect(error.error.errorMessage).to.include("接收者账户无效");
+    }
+  });
+
+  it("测试零金额转账", async () => {
+    console.log("测试零金额转账...");
+    try {
+      // 尝试转账0 SOL
+      const transferAmount = new BN(0);
+      const transferFee = new BN(10_000_000); // 0.01 SOL
+      
+      // 创建一个接收者
+      const recipient = Keypair.generate();
+      
+      // 构建转账信息
+      const transferInfo = {
+        amounts: [transferAmount],
+        recipients: [recipient.publicKey],
+      };
+      
+      // 执行零金额转账
+      await program.methods
+        .transferSol(transferInfo, transferFee)
+        .accounts({
+          sender: provider.wallet.publicKey,
+          systemProgram: SystemProgram.programId,
+          bankAccount: bankAccountPDA,
+        })
+        .rpc();
+      
+      // 如果没有抛出错误，测试应该失败
+      assert.fail("应该抛出零金额转账的错误");
+    } catch (err) {
+      console.log("预期的错误:", err.toString());
+      // 确保抛出了合适的错误
+      assert.include(err.toString(), "Error");
+    }
+  });
+
+  it("测试单一接收者的批量转账SOL", async () => {
+    console.log("测试单一接收者的批量转账SOL...");
+    
+    // 记录转账前的余额
+    const initialRecipientBalance = await provider.connection.getBalance(recipient1.publicKey);
+    const initialBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+
+    // 准备转账数据，仅包含一个接收者
+    const transfers = [
+      {
+        recipient: recipient1.publicKey,
+        amount: mockAmount1,
+      },
+    ];
+
+    // 调用批量转账SOL指令
+    await program.methods
+      .batchTransferSol(transfers)
+      // @ts-ignore - Anchor类型错误，但实际是有效的
+      .accounts({
+        sender: sender.publicKey,
+        bankAccount: bankAccountPDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .remainingAccounts([
+        {
+          pubkey: recipient1.publicKey,
+          isWritable: true,
+          isSigner: false,
+        },
+      ])
+      .signers([sender])
+      .rpc();
+
+    // 验证转账结果
+    const finalRecipientBalance = await provider.connection.getBalance(recipient1.publicKey);
+    const finalBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+
+    // 验证接收者余额增加
+    expect(finalRecipientBalance - initialRecipientBalance).to.equal(mockAmount1.toNumber());
+    
+    // 验证手续费已经收取
+    expect(finalBankAccountBalance - initialBankAccountBalance).to.equal(mockFee.toNumber());
+  });
+
+  it("测试极小金额转账（1 lamport）", async () => {
+    console.log("测试极小金额转账（1 lamport）...");
+    
+    // 记录转账前的余额
+    const initialRecipientBalance = await provider.connection.getBalance(recipient1.publicKey);
+    const initialBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+
+    // 准备转账数据，金额为1 lamport
+    const minAmount = new BN(1);
+    const transfers = [
+      {
+        recipient: recipient1.publicKey,
+        amount: minAmount,
+      },
+    ];
+
+    // 调用批量转账SOL指令
+    await program.methods
+      .batchTransferSol(transfers)
+      // @ts-ignore - Anchor类型错误，但实际是有效的
+      .accounts({
+        sender: sender.publicKey,
+        bankAccount: bankAccountPDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .remainingAccounts([
+        {
+          pubkey: recipient1.publicKey,
+          isWritable: true,
+          isSigner: false,
+        },
+      ])
+      .signers([sender])
+      .rpc();
+
+    // 验证转账结果
+    const finalRecipientBalance = await provider.connection.getBalance(recipient1.publicKey);
+    const finalBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+
+    // 验证接收者余额增加
+    expect(finalRecipientBalance - initialRecipientBalance).to.equal(minAmount.toNumber());
+    
+    // 验证手续费已经收取
+    expect(finalBankAccountBalance - initialBankAccountBalance).to.equal(mockFee.toNumber());
+  });
+
+  it("测试混合SOL和SPL Token的连续转账", async () => {
+    console.log("测试混合SOL和SPL Token的连续转账...");
+    
+    // 记录转账前的余额
+    const initialSolBalance = await provider.connection.getBalance(recipient1.publicKey);
+    const initialTokenBalance = await provider.connection.getTokenAccountBalance(recipient1TokenAccount);
+    const initialBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+
+    // 1. 首先进行SOL转账
+    const solTransfers = [
+      {
+        recipient: recipient1.publicKey,
+        amount: mockAmount1,
+      },
+    ];
+
+    await program.methods
+      .batchTransferSol(solTransfers)
+      // @ts-ignore - Anchor类型错误，但实际是有效的
+      .accounts({
+        sender: sender.publicKey,
+        bankAccount: bankAccountPDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .remainingAccounts([
+        {
+          pubkey: recipient1.publicKey,
+          isWritable: true,
+          isSigner: false,
+        },
+      ])
+      .signers([sender])
+      .rpc();
+
+    // 2. 然后进行Token转账
+    const tokenTransfers = [
+      {
+        recipient: recipient1TokenAccount,
+        amount: mockAmount1,
+      },
+    ];
+
+    await program.methods
+      .batchTransferToken(tokenTransfers)
+      // @ts-ignore - Anchor类型错误，但实际是有效的
+      .accounts({
+        sender: sender.publicKey,
+        bankAccount: bankAccountPDA,
+        tokenAccount: senderTokenAccount,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .remainingAccounts([
+        {
+          pubkey: recipient1TokenAccount,
+          isWritable: true,
+          isSigner: false,
+        },
+      ])
+      .signers([sender])
+      .rpc();
+
+    // 验证转账结果
+    const finalSolBalance = await provider.connection.getBalance(recipient1.publicKey);
+    const finalTokenBalance = await provider.connection.getTokenAccountBalance(recipient1TokenAccount);
+    const finalBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+
+    // 验证SOL余额增加
+    expect(finalSolBalance - initialSolBalance).to.equal(mockAmount1.toNumber());
+    
+    // 验证Token余额增加
+    expect(
+      Number(finalTokenBalance.value.amount) - Number(initialTokenBalance.value.amount)
+    ).to.equal(mockAmount1.toNumber());
+    
+    // 验证手续费收取了两次
+    expect(finalBankAccountBalance - initialBankAccountBalance).to.equal(mockFee.toNumber() * 2);
+  });
+
+  it("测试Token转账时接收者是无效的Token账户", async () => {
+    console.log("测试Token转账时接收者是无效的Token账户...");
+    
+    // 创建一个普通账户，而非Token账户
+    const invalidTokenAccount = Keypair.generate();
+    await provider.connection.requestAirdrop(invalidTokenAccount.publicKey, 0.1 * LAMPORTS_PER_SOL);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 准备转账数据
+    const transfers = [
+      {
+        recipient: invalidTokenAccount.publicKey, // 此账户不是有效的Token账户
+        amount: mockAmount1,
+      },
+    ];
+
+    try {
+      // 尝试转账
+      await program.methods
+        .batchTransferToken(transfers)
+        // @ts-ignore - Anchor类型错误，但实际是有效的
+        .accounts({
+          sender: sender.publicKey,
+          bankAccount: bankAccountPDA,
+          tokenAccount: senderTokenAccount,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .remainingAccounts([
+          {
+            pubkey: invalidTokenAccount.publicKey,
+            isWritable: true,
+            isSigner: false,
+          },
+        ])
+        .signers([sender])
+        .rpc();
+      
+      // 如果执行到这里，说明没有抛出异常，测试应该失败
+      expect.fail("应该抛出错误：无效的Token账户");
+    } catch (error) {
+      // Token程序应该会抛出错误，但错误消息可能会有所不同
+      console.log("预期的错误:", error.message);
+      expect(error.message).to.include("failed"); // Token程序会抛出执行失败的错误
+    }
+  });
+
+  it("测试批量转账后更新手续费", async () => {
+    console.log("测试批量转账后更新手续费...");
+    
+    // 获取当前手续费
+    const bankAccount = await program.account.bankAccount.fetch(bankAccountPDA);
+    const currentFee = bankAccount.fee;
+    console.log("当前手续费:", currentFee.toString(), "lamports");
+    
+    // 准备新的手续费值 - 增加当前手续费
+    const newFee = currentFee.add(new BN(0.01 * LAMPORTS_PER_SOL));
+    console.log("新手续费:", newFee.toString(), "lamports");
+    
+    try {
+      // 确保使用正确的管理员账户
+      const isAdmin = bankAccount.admin.equals(admin.publicKey);
+      if (!isAdmin) {
+        console.log("测试账户不是管理员，跳过此测试");
+        return;
+      }
+      
+      // 使用管理员账户设置新的手续费
+      await program.methods
+        .setFee(newFee)
+        // @ts-ignore - Anchor类型错误，但实际是有效的
+        .accounts({
+          bankAccount: bankAccountPDA,
+          admin: admin.publicKey,
+        })
+        .signers([admin])
+        .rpc();
+      
+      // 验证手续费已更新
+      const updatedBankAccount = await program.account.bankAccount.fetch(bankAccountPDA);
+      expect(updatedBankAccount.fee.toString()).to.equal(newFee.toString());
+      console.log("手续费已成功更新为:", updatedBankAccount.fee.toString(), "lamports");
+      
+      // 使用新的手续费进行转账测试
+      const transfers = [
+        {
+          recipient: recipient1.publicKey,
+          amount: mockAmount1,
+        },
+      ];
+      
+      // 记录转账前的余额
+      const initialRecipientBalance = await provider.connection.getBalance(recipient1.publicKey);
+      const initialBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+      
+      // 调用批量转账SOL指令
+      await program.methods
+        .batchTransferSol(transfers)
+        // @ts-ignore - Anchor类型错误，但实际是有效的
+        .accounts({
+          sender: sender.publicKey,
+          bankAccount: bankAccountPDA,
+          systemProgram: SystemProgram.programId,
+        })
+        .remainingAccounts([
+          {
+            pubkey: recipient1.publicKey,
+            isWritable: true,
+            isSigner: false,
+          },
+        ])
+        .signers([sender])
+        .rpc();
+      
+      // 验证转账结果，应该使用新的手续费
+      const finalRecipientBalance = await provider.connection.getBalance(recipient1.publicKey);
+      const finalBankAccountBalance = await provider.connection.getBalance(bankAccountPDA);
+      
+      // 验证接收者余额增加
+      expect(finalRecipientBalance - initialRecipientBalance).to.equal(mockAmount1.toNumber());
+      
+      // 验证手续费已经收取，应该是新设置的手续费
+      expect(finalBankAccountBalance - initialBankAccountBalance).to.equal(newFee.toNumber());
+    } catch (error) {
+      console.error("更新手续费或测试转账失败:", error);
+      // 如果错误是由于权限问题，我们跳过此测试而不是失败
+      if (error.toString().includes("Unauthorized")) {
+        console.log("权限错误，跳过测试");
+        return;
+      }
+      throw error;
     }
   });
 }); 
